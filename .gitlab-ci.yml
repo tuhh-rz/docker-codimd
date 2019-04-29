@@ -1,0 +1,77 @@
+variables:
+    # Das Image aus welchen Branch soll mit `latest` getagt werden?
+    # Leer lassen, wenn der current branch der master branch sein soll
+    CURRENT_BRANCH: ""
+
+    IMAGE_REGISTRY_GITLAB: collaborating.tuhh.de:5005
+    IMAGE_REGISTRY: docker.rz.tu-harburg.de:5000
+    
+    TEST_IMAGE: ${IMAGE_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID}
+    VERSIONED_IMAGE: ${IMAGE_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:{$CI_COMMIT_REF_NAME}
+    RELEASE_IMAGE: ${IMAGE_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:latest
+    
+    RELEASE_IMAGE_GITLAB: ${IMAGE_REGISTRY_GITLAB}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:latest
+
+stages:
+    - build
+    - deploy
+    
+docker_image:
+    stage: build
+    only:
+        - tags
+        - triggers        
+        - branches
+    tags:
+        - build
+    script:
+        - echo "Building … ${TEST_IMAGE}"
+        # Nur, wenn es keinen CURRENT_BRANCH gibt oder wenn es einen gibt und es aber nicht der Master-Branch ist
+        - if [ -z ${CURRENT_BRANCH} ] || [ "${CI_COMMIT_REF_NAME}" != "master" ]; then sudo docker build --no-cache --pull -t "${TEST_IMAGE}" .; fi
+    retry: 2
+
+# Deployment der Images `latest` 
+deploy:master:
+    stage: deploy
+    script:
+        - echo "Deploy … ${RELEASE_IMAGE}"
+        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker tag "${TEST_IMAGE}" "${RELEASE_IMAGE}"; fi
+        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker push "${RELEASE_IMAGE}"; fi
+    tags:
+        - deploy
+    only:
+        - master
+        
+# Deployment der Images `latest` in die GitLab Registry
+deploy:master:gitlab:
+    stage: deploy
+    script:
+        - echo "Deploy … ${RELEASE_IMAGE_GITLAB}"
+        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${IMAGE_REGISTRY_GITLAB}; fi
+        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker tag "${TEST_IMAGE}" "${RELEASE_IMAGE_GITLAB}"; fi
+        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker push "${RELEASE_IMAGE_GITLAB}"; fi
+    tags:
+        - deploy
+    only:
+        refs:
+            - master
+        variables:
+            - $USE_GITLAB_REGISTRY == 'true'
+
+# Deployment der Images mit Versionstag und gegebenenfalls `latest`
+deploy:version:
+    stage: deploy
+    script:
+        - sudo docker tag "${TEST_IMAGE}" "$VERSIONED_IMAGE"
+        - if [ ! -z ${CURRENT_BRANCH} ] && [ "${CI_COMMIT_REF_NAME}" == "${CURRENT_BRANCH}" ]; then sudo docker tag "${TEST_IMAGE}" "${RELEASE_IMAGE}"; fi
+        - sudo docker push "${VERSIONED_IMAGE}"
+        - if [ ! -z ${CURRENT_BRANCH} ] && [ "${CI_COMMIT_REF_NAME}" == "${CURRENT_BRANCH}" ]; then sudo docker push "${RELEASE_IMAGE}"; fi
+    tags:
+        - deploy
+    only:
+        - branches
+        - /^v.*$/
+        - /^.*-release$/
+        - /^.*-stable$/
+    except:
+        - master
