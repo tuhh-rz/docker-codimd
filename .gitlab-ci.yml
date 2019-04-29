@@ -1,77 +1,91 @@
 variables:
-    # Das Image aus welchen Branch soll mit `latest` getagt werden?
-    # Leer lassen, wenn der current branch der master branch sein soll
-    CURRENT_BRANCH: ""
+    CONTAINER_RELEASE_IMAGE: docker.rz.tu-harburg.de:5000/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
+    LATEST_VERSION: 'debian'
+    EXT_REPO_CREDENTIALS: ${CODIMD_REPO_USER}:${CODIMD_REPO_TOKEN}
 
-    IMAGE_REGISTRY_GITLAB: collaborating.tuhh.de:5005
-    IMAGE_REGISTRY: docker.rz.tu-harburg.de:5000
-    
-    TEST_IMAGE: ${IMAGE_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID}
-    VERSIONED_IMAGE: ${IMAGE_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:{$CI_COMMIT_REF_NAME}
-    RELEASE_IMAGE: ${IMAGE_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:latest
-    
-    RELEASE_IMAGE_GITLAB: ${IMAGE_REGISTRY_GITLAB}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:latest
+.build_script_template:
+    script:  &build_script_definition
+        - pwd
+        - sudo docker build --build-arg EXT_REPO_CREDENTIALS=${EXT_REPO_CREDENTIALS} --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" -f "${VERSION}/${VARIANT}/Dockerfile" .
+
+.build_before_script_template:
+    before_script:  &build_before_script_definition
+        - pwd
+        - git submodule update --init --recursive
+
+.deploy_script_template:
+    script:  &deploy_script_definition
+        - pwd
+        - sudo docker push "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}"
+        - if [ ! -z ${LATEST_VERSION} ] && [ "${LATEST_VERSION}" == "${VERSION}${VARIANT:+-$VARIANT}" ]; then sudo docker tag "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" "${CONTAINER_RELEASE_IMAGE}:latest"; sudo docker push "${CONTAINER_RELEASE_IMAGE}:latest"; fi
+
+.build_branches_script_template:
+    script:  &build_branches_script_definition
+        - pwd
+        - sudo docker build --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}"_"${CI_COMMIT_REF_NAME}" "${VERSION}"/"${VARIANT}"
+
+.build_branches_before_script_template:
+    before_script:  &build_branches_before_script_definition
+        - pwd
+        - git submodule update --init --recursive
+
+.deploy_branches_script_template:
+    script:  &deploy_branches_script_definition
+        - pwd
+        - sudo docker push "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}"_"${CI_COMMIT_REF_NAME}"
 
 stages:
     - build
     - deploy
-    
-docker_image:
+
+
+build:debian:
     stage: build
     only:
-        - tags
-        - triggers        
-        - branches
+        - master
     tags:
         - build
-    script:
-        - echo "Building … ${TEST_IMAGE}"
-        # Nur, wenn es keinen CURRENT_BRANCH gibt oder wenn es einen gibt und es aber nicht der Master-Branch ist
-        - if [ -z ${CURRENT_BRANCH} ] || [ "${CI_COMMIT_REF_NAME}" != "master" ]; then sudo docker build --no-cache --pull -t "${TEST_IMAGE}" .; fi
-    retry: 2
+    variables:
+        VERSION: 'debian'
+        VARIANT: ''
+    before_script: *build_before_script_definition
+    script: *build_script_definition
 
-# Deployment der Images `latest` 
-deploy:master:
+deploy:debian:
     stage: deploy
-    script:
-        - echo "Deploy … ${RELEASE_IMAGE}"
-        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker tag "${TEST_IMAGE}" "${RELEASE_IMAGE}"; fi
-        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker push "${RELEASE_IMAGE}"; fi
     tags:
         - deploy
     only:
         - master
-        
-# Deployment der Images `latest` in die GitLab Registry
-deploy:master:gitlab:
-    stage: deploy
-    script:
-        - echo "Deploy … ${RELEASE_IMAGE_GITLAB}"
-        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${IMAGE_REGISTRY_GITLAB}; fi
-        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker tag "${TEST_IMAGE}" "${RELEASE_IMAGE_GITLAB}"; fi
-        - if [ -z ${CURRENT_BRANCH} ]; then sudo docker push "${RELEASE_IMAGE_GITLAB}"; fi
-    tags:
-        - deploy
-    only:
-        refs:
-            - master
-        variables:
-            - $USE_GITLAB_REGISTRY == 'true'
+    variables:
+        VERSION: 'debian'
+        VARIANT: ''
+    script: *deploy_script_definition
 
-# Deployment der Images mit Versionstag und gegebenenfalls `latest`
-deploy:version:
+build:branches:debian:
+    stage: build
+    only:
+        - branches
+    except:
+        - master
+    tags:
+        - build
+    variables:
+        VERSION: 'debian'
+        VARIANT: ''
+    before_script: *build_branches_before_script_definition
+    script: *build_branches_script_definition
+
+deploy:branches:debian:
     stage: deploy
-    script:
-        - sudo docker tag "${TEST_IMAGE}" "$VERSIONED_IMAGE"
-        - if [ ! -z ${CURRENT_BRANCH} ] && [ "${CI_COMMIT_REF_NAME}" == "${CURRENT_BRANCH}" ]; then sudo docker tag "${TEST_IMAGE}" "${RELEASE_IMAGE}"; fi
-        - sudo docker push "${VERSIONED_IMAGE}"
-        - if [ ! -z ${CURRENT_BRANCH} ] && [ "${CI_COMMIT_REF_NAME}" == "${CURRENT_BRANCH}" ]; then sudo docker push "${RELEASE_IMAGE}"; fi
     tags:
         - deploy
     only:
         - branches
-        - /^v.*$/
-        - /^.*-release$/
-        - /^.*-stable$/
     except:
         - master
+    variables:
+        VERSION: 'debian'
+        VARIANT: ''
+    script: *deploy_branches_script_definition
+
