@@ -2,7 +2,7 @@ variables:
     CONTAINER_RELEASE_IMAGE: docker.rz.tu-harburg.de:5000/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
     LATEST_VERSION: 'debian'
     CODIMD_REPOSITORY: https://${CODIMD_REPO_USER}:${CODIMD_REPO_TOKEN}@collaborating.tuhh.de/rzt/customized_oss/codimd-server.git
-    SERVER_VERSION: '1.5.0+tuhh-1'
+    SERVER_VERSION: '1.5.0+tuhh-2'
 
 .build_script_template:
     script:  &build_script_definition
