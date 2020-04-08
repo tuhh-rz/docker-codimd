@@ -10,6 +10,7 @@ ENV BRANCH="$VERSION+tuhh"
 
 RUN echo $VERSION
 RUN echo $BRANCH
+RUN pwd
 
 # Set some default config variables
 ARG DEBIAN_FRONTEND=noninteractive
