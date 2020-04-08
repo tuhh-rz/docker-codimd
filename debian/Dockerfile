@@ -5,6 +5,9 @@ ARG CODIMD_REPOSITORY=https://github.com/codimd/server.git
 ARG VERSION=master
 ARG UID=10000
 
+ENV VERSION=$VERSION
+RUN echo $VERSION
+
 # Set some default config variables
 ARG DEBIAN_FRONTEND=noninteractive
 ENV DOCKERIZE_VERSION=v0.6.1
