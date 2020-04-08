@@ -1,7 +1,0 @@
-{
-  "docker-tags": {
-    "debian": {
-      "build-branch": "master"
-    }
-  }
-}

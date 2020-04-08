@@ -2,11 +2,14 @@ FROM node:12.16.1-slim
 
 # Build arguments to change source url, branch or tag
 ARG CODIMD_REPOSITORY=https://github.com/codimd/server.git
-ARG VERSION=master
 ARG UID=10000
 
+ARG VERSION=${VERSION}
 ENV VERSION=$VERSION
+ENV BRANCH="$VERSION+tuhh"
+
 RUN echo $VERSION
+RUN echo $BRANCH
 
 # Set some default config variables
 ARG DEBIAN_FRONTEND=noninteractive
@@ -15,8 +18,8 @@ ENV NODE_ENV=production
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
-      ca-certificates \
-      wget && \
+    ca-certificates \
+    wget && \
     rm -r /var/lib/apt/lists/*
 
 RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && \
@@ -29,7 +32,7 @@ COPY ["resources/gosu-gpg.key", "/tmp/gosu.key"]
 RUN set -ex; \
     apt-get update && \
     apt-get install --no-install-recommends -qy \
-      gpg && \
+    gpg && \
     dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
     wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
     wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
@@ -44,25 +47,25 @@ RUN set -ex; \
     # verify that the binary works
     gosu nobody true && \
     apt-get autoremove --purge -qy \
-      gpg && \
+    gpg && \
     rm -r /var/lib/apt/lists/*
 
 # Add configuraton files
 COPY ["resources/config.json", "resources/.sequelizerc", "/files/"]
 
 RUN export dev_apt=( \
-      "bzip2" \
-      "git" \
-      "jq" \
+    "bzip2" \
+    "git" \
+    "jq" \
     ) && \
     apt-get update && \
     apt-get install --no-install-recommends -y \
-      "${dev_apt[@]}" \
-      # Add fonts for PDF export
-      fonts-noto && \
+    "${dev_apt[@]}" \
+    # Add fonts for PDF export
+    fonts-noto && \
     \
     # Clone the source
-    git clone --depth 1 --branch "$VERSION" "$CODIMD_REPOSITORY" /codimd && \
+    git clone --depth 1 --branch "$BRANCH" "$CODIMD_REPOSITORY" /codimd && \
     # Print the cloned version and clean up git files
     cd /codimd && \
     git log --pretty=format:'%ad %h %d' --abbrev-commit --date=short -1 && echo && \

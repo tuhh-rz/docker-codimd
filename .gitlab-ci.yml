@@ -1,6 +1,6 @@
 variables:
     CONTAINER_RELEASE_IMAGE: docker.rz.tu-harburg.de:5000/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
-    LATEST_VERSION: 'debian'
+    LATEST_VERSION: '1-debian'
     CODIMD_REPOSITORY: https://${CODIMD_REPO_USER}:${CODIMD_REPO_TOKEN}@collaborating.tuhh.de/rzt/customized_oss/codimd-server.git
     SERVER_VERSION: 1.6.0+tuhh
 
@@ -17,7 +17,7 @@ variables:
         # - download=$(curl -s https://cgi.tu-harburg.de/~rztwww/Software/program_file.json | jq --arg KEY "$key" --raw-output '.[$KEY] | .download')
         # - if [[ -z $download ]]; then exit 1; fi
 
-        - sudo docker build --build-arg CODIMD_REPOSITORY=${CODIMD_REPOSITORY} --build-arg DOWNLOAD="${download}" --build-arg VERSION="${version}" --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" -f "${VERSION}/${VARIANT}/Dockerfile" .
+        - sudo docker build --build-arg CODIMD_REPOSITORY=${CODIMD_REPOSITORY} --build-arg DOWNLOAD="${download}" --build-arg VERSION="${version}" --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" "${VERSION}"/"${VARIANT}"
 
 .build_before_script_template:
     before_script:  &build_before_script_definition
@@ -45,35 +45,37 @@ variables:
         - pwd
         - sudo docker push "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}"_"${CI_COMMIT_REF_NAME}"
 
+
 stages:
     - build
     - deploy
 
 
-build:debian:
+build:1-debian:
     stage: build
     only:
         - master
     tags:
         - build
     variables:
-        VERSION: 'debian'
-        VARIANT: ''
+        VERSION: '1'
+        VARIANT: 'debian'
     before_script: *build_before_script_definition
     script: *build_script_definition
 
-deploy:debian:
+deploy:1-debian:
     stage: deploy
+    needs: ["build:1-debian"]
     tags:
         - deploy
     only:
         - master
     variables:
-        VERSION: 'debian'
-        VARIANT: ''
+        VERSION: '1'
+        VARIANT: 'debian'
     script: *deploy_script_definition
 
-build:branches:debian:
+build:branches:1-debian:
     stage: build
     only:
         - branches
@@ -82,13 +84,14 @@ build:branches:debian:
     tags:
         - build
     variables:
-        VERSION: 'debian'
-        VARIANT: ''
+        VERSION: '1'
+        VARIANT: 'debian'
     before_script: *build_branches_before_script_definition
     script: *build_branches_script_definition
 
-deploy:branches:debian:
+deploy:branches:1-debian:
     stage: deploy
+    needs: ["build:branches:1-debian"]
     tags:
         - deploy
     only:
@@ -96,7 +99,7 @@ deploy:branches:debian:
     except:
         - master
     variables:
-        VERSION: 'debian'
-        VARIANT: ''
+        VERSION: '1'
+        VARIANT: 'debian'
     script: *deploy_branches_script_definition
 
