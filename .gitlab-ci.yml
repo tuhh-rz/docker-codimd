@@ -7,7 +7,7 @@ variables:
 .build_script_template:
     script:  &build_script_definition
         - pwd
-        - sudo docker build --build-arg CODIMD_REPOSITORY=${CODIMD_REPOSITORY} --build-arg VERSION=${VERSION} --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" -f "${VERSION}/${VARIANT}/Dockerfile" .
+        - sudo docker build --build-arg CODIMD_REPOSITORY=${CODIMD_REPOSITORY} --build-arg VERSION=${SERVER_VERSION} --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" -f "${VERSION}/${VARIANT}/Dockerfile" .
 
 .build_before_script_template:
     before_script:  &build_before_script_definition
