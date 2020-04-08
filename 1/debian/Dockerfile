@@ -28,7 +28,6 @@ RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSI
 
 ENV GOSU_VERSION 1.11
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-COPY ["$VARIANT/resources/gosu-gpg.key", "/tmp/gosu.key"]
 COPY ["$VERSION/$VARIANT/resources/gosu-gpg.key", "/tmp/gosu.key"]
 
 RUN set -ex; \
