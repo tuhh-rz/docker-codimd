@@ -12,6 +12,7 @@ variables:
         - version=$(curl -s https://cgi.tu-harburg.de/~rztwww/Software/program_file.json | jq --arg KEY "$key" --raw-output '.[$KEY] | .version')
         - if [[ -z $version ]]; then exit 1; fi
         - version=$(echo $version | sed -e 's/%2B/+/g')
+        - version="$version+tuhh"
 
         # - download=$(curl -s https://cgi.tu-harburg.de/~rztwww/Software/program_file.json | jq --arg KEY "$key" --raw-output '.[$KEY] | .download')
         # - if [[ -z $download ]]; then exit 1; fi
