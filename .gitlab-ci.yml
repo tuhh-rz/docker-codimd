@@ -17,7 +17,7 @@ variables:
         # - download=$(curl -s https://cgi.tu-harburg.de/~rztwww/Software/program_file.json | jq --arg KEY "$key" --raw-output '.[$KEY] | .download')
         # - if [[ -z $download ]]; then exit 1; fi
 
-        - sudo docker build --build-arg CODIMD_REPOSITORY=${CODIMD_REPOSITORY} --build-arg DOWNLOAD="${download}" --build-arg VERSION="${version}" --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" "${VERSION}"/"${VARIANT}"
+        - sudo docker build --build-arg CODIMD_REPOSITORY=${CODIMD_REPOSITORY} --build-arg DOWNLOAD="${download}" --build-arg VERSION="${version}" --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" "${VERSION}"/"${VARIANT}" -f "${VERSION}/${VARIANT}/Dockerfile" .
 
 .build_before_script_template:
     before_script:  &build_before_script_definition
