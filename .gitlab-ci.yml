@@ -7,12 +7,12 @@ variables:
 .build_script_template:
     script:  &build_script_definition
         - pwd
-        - key="codimd"
+        - key="CodiMD"
 
         - version=$(curl -s https://cgi.tu-harburg.de/~rztwww/Software/program_file.json | jq --arg KEY "$key" --raw-output '.[$KEY] | .version')
         - if [[ -z $version ]]; then exit 1; fi
         - version=$(echo $version | sed -e 's/%2B/+/g')
-        - version="$version+tuhh"
+        - version="$version"
 
         # - download=$(curl -s https://cgi.tu-harburg.de/~rztwww/Software/program_file.json | jq --arg KEY "$key" --raw-output '.[$KEY] | .download')
         # - if [[ -z $download ]]; then exit 1; fi
