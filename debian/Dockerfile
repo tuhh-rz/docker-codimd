@@ -2,7 +2,7 @@ FROM node:12.16.1-slim
 
 # Build arguments to change source url, branch or tag
 ARG CODIMD_REPOSITORY=https://github.com/codimd/server.git
-ARG VERSION=master
+ARG VERSION=$VERSION
 ARG UID=10000
 
 ENV VERSION=$VERSION
