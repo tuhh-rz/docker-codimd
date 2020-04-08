@@ -1,6 +1,6 @@
 variables:
     CONTAINER_RELEASE_IMAGE: docker.rz.tu-harburg.de:5000/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
-    LATEST_VERSION: '1-debian'
+    LATEST_VERSION: '1'
     CODIMD_REPOSITORY: https://${CODIMD_REPO_USER}:${CODIMD_REPO_TOKEN}@collaborating.tuhh.de/rzt/customized_oss/codimd-server.git
     SERVER_VERSION: 1.6.0+tuhh
 
@@ -52,7 +52,7 @@ stages:
     - deploy
 
 
-build:1-debian:
+build:1:
     stage: build
     only:
         - master
@@ -60,23 +60,23 @@ build:1-debian:
         - build
     variables:
         VERSION: '1'
-        VARIANT: 'debian'
+        VARIANT: ''
     before_script: *build_before_script_definition
     script: *build_script_definition
 
-deploy:1-debian:
+deploy:1:
     stage: deploy
-    needs: ["build:1-debian"]
+    needs: ["build:1"]
     tags:
         - deploy
     only:
         - master
     variables:
         VERSION: '1'
-        VARIANT: 'debian'
+        VARIANT: ''
     script: *deploy_script_definition
 
-build:branches:1-debian:
+build:branches:1:
     stage: build
     only:
         - branches
@@ -86,13 +86,13 @@ build:branches:1-debian:
         - build
     variables:
         VERSION: '1'
-        VARIANT: 'debian'
+        VARIANT: ''
     before_script: *build_branches_before_script_definition
     script: *build_branches_script_definition
 
-deploy:branches:1-debian:
+deploy:branches:1:
     stage: deploy
-    needs: ["build:branches:1-debian"]
+    needs: ["build:branches:1"]
     tags:
         - deploy
     only:
@@ -101,6 +101,6 @@ deploy:branches:1-debian:
         - master
     variables:
         VERSION: '1'
-        VARIANT: 'debian'
+        VARIANT: ''
     script: *deploy_branches_script_definition
 
