@@ -15,7 +15,7 @@
         }
     ],
     "image-tags": {
-        "debian": {
+        "1": {
             "action": "build"
         }
     }
