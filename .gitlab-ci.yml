@@ -1,23 +1,35 @@
 variables:
     CONTAINER_RELEASE_IMAGE: docker.rz.tu-harburg.de:5000/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
     LATEST_VERSION: '1'
-    CODIMD_REPOSITORY: https://${CODIMD_REPO_USER}:${CODIMD_REPO_TOKEN}@collaborating.tuhh.de/rzt/customized_oss/codimd-server.git
-    SERVER_VERSION: 1.6.0+tuhh
+    APP: 'CodiMD'
+    APP_OVERVIEW_URL: https://cgi.tu-harburg.de/~rztwww/Software/program_file.json
+    KEY: "${APP} ${VERSION}"
 
 .build_script_template:
-    script:  &build_script_definition
-        - pwd
-        - key="CodiMD"
+  script: &build_script_definition
+    - pwd
 
-        - version=$(curl -s https://cgi.tu-harburg.de/~rztwww/Software/program_file.json | jq --arg KEY "$key" --raw-output '.[$KEY] | .version')
-        - if [[ -z $version ]]; then exit 1; fi
-        - version=$(echo $version | sed -e 's/%2B/+/g')
-        - version="$version"
+    - version=$(curl -s ${APP_OVERVIEW_URL} | jq --arg KEY "$KEY" --arg APP "$APP" --raw-output '.[$APP] | .[$KEY] | .version')
+    - if [[ -z $version ]] || [[ $version == "null" ]]; then exit 1; fi
+    - version=$(echo $version | sed -e 's/%2B/+/g')
 
-        # - download=$(curl -s https://cgi.tu-harburg.de/~rztwww/Software/program_file.json | jq --arg KEY "$key" --raw-output '.[$KEY] | .download')
-        # - if [[ -z $download ]]; then exit 1; fi
+    # - download=$(curl -s ${APP_OVERVIEW_URL} | jq --arg KEY "$KEY" --arg APP "$APP" --raw-output '.[$APP] | .[$KEY] | .download')
+    # - if [[ -z $download ]] || [[ $download == "null" ]]; then exit 1; fi
 
-        - sudo docker build --build-arg CODIMD_REPOSITORY=${CODIMD_REPOSITORY} --build-arg DOWNLOAD="${download}" --build-arg VERSION="${version}" --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" "${VERSION}/${VARIANT}"
+    - sudo docker build --build-arg DOWNLOAD="${download}" --build-arg VERSION="${version}" --no-cache --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" "${VERSION}"/"${VARIANT}"
+
+.build_branches_script_template:
+  script: &build_branches_script_definition
+    - pwd
+
+    - version=$(curl -s ${APP_OVERVIEW_URL} | jq --arg KEY "$KEY" --arg APP "$APP" --raw-output '.[$APP] | .[$KEY] | .version')
+    - if [[ -z $version ]] || [[ $version == "null" ]]; then exit 1; fi
+    - version=$(echo $version | sed -e 's/%2B/+/g')
+
+    # - download=$(curl -s ${APP_OVERVIEW_URL} | jq --arg KEY "$KEY" --arg APP "$APP" --raw-output '.[$APP] | .[$KEY] | .download')
+    # - if [[ -z $download ]] || [[ $download == "null" ]]; then exit 1; fi
+
+    - sudo docker build --build-arg DOWNLOAD="${download}" --build-arg VERSION="${version}" --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}"_"${CI_COMMIT_REF_NAME}" "${VERSION}"/"${VARIANT}"    
 
 .build_before_script_template:
     before_script:  &build_before_script_definition
@@ -30,11 +42,6 @@ variables:
         - sudo docker push "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}"
         - if [ ! -z ${LATEST_VERSION} ] && [ "${LATEST_VERSION}" == "${VERSION}${VARIANT:+-$VARIANT}" ]; then sudo docker tag "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}" "${CONTAINER_RELEASE_IMAGE}:latest"; sudo docker push "${CONTAINER_RELEASE_IMAGE}:latest"; fi
 
-.build_branches_script_template:
-    script:  &build_branches_script_definition
-        - pwd
-        - sudo docker build --pull -t "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}"_"${CI_COMMIT_REF_NAME}" "${VERSION}"/"${VARIANT}"
-
 .build_branches_before_script_template:
     before_script:  &build_branches_before_script_definition
         - pwd
@@ -45,16 +52,39 @@ variables:
         - pwd
         - sudo docker push "${CONTAINER_RELEASE_IMAGE}":"${VERSION}${VARIANT:+-$VARIANT}"_"${CI_COMMIT_REF_NAME}"
 
-
 stages:
     - build
     - deploy
+    
+build:incubator:1:
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "incubator"'
+  retry: 2
+  tags:
+    - build
+  variables:
+        VERSION: '1'
+        VARIANT: ''
+  before_script: *build_branches_before_script_definition
+  script: *build_branches_script_definition
 
+deploy:incubator:1:
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "incubator"'
+  needs: ["build:incubator:1:"]
+  tags:
+    - deploy
+  variables:
+    VERSION: "1"
+    VARIANT: ""
+  script: *deploy_branches_script_definition
 
 build:1:
     stage: build
-    only:
-        - master
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "master"'
     tags:
         - build
     variables:
@@ -64,23 +94,25 @@ build:1:
     script: *build_script_definition
 
 deploy:1:
-    stage: deploy
     needs: ["build:1"]
+    stage: deploy
     tags:
         - deploy
-    only:
-        - master
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "master"'
     variables:
         VERSION: '1'
         VARIANT: ''
-    script: *deploy_script_definition
+    script: *deploy_script_definition 
 
 build:branches:1:
-    stage: build
-    only:
-        - branches
-    except:
-        - master
+    stage: build  
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "master"'
+          when: never
+        - if: '$CI_COMMIT_REF_NAME == "incubator"'
+          when: never
+        - when: always
     tags:
         - build
     variables:
@@ -90,16 +122,17 @@ build:branches:1:
     script: *build_branches_script_definition
 
 deploy:branches:1:
-    stage: deploy
     needs: ["build:branches:1"]
+    stage: deploy
     tags:
         - deploy
-    only:
-        - branches
-    except:
-        - master
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "master"'
+          when: never
+        - if: '$CI_COMMIT_REF_NAME == "incubator"'
+          when: never
+        - when: always
     variables:
         VERSION: '1'
-        VARIANT: ''
+        VARIANT: ''    
     script: *deploy_branches_script_definition
-
