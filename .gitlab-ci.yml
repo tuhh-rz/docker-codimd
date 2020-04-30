@@ -7,6 +7,13 @@ variables:
 
     CODIMD_REPOSITORY: https://${CODIMD_REPO_USER}:${CODIMD_REPO_TOKEN}@collaborating.tuhh.de/rzt/customized_oss/codimd-server.git
 
+workflow:
+  rules:
+    - changes
+      - .gitlab-ci.yml
+      - .tuhh-build.json
+      when: manual
+
 
 .build_script_template:
   script: &build_script_definition
