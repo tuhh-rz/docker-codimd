@@ -73,7 +73,7 @@ deploy:incubator:1:
   stage: deploy
   rules:
     - if: '$CI_COMMIT_REF_NAME == "incubator"'
-  needs: ["build:incubator:1:"]
+  needs: ["build:incubator:1"]
   tags:
     - deploy
   variables:
