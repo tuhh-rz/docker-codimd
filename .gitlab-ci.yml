@@ -9,7 +9,7 @@ variables:
 
 workflow:
   rules:
-    - changes
+    - changes:
       - .gitlab-ci.yml
       - .tuhh-build.json
       when: manual
