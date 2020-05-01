@@ -3,6 +3,7 @@
     "version-check": {
         "active": true,
         "master_key": "CodiMD",
+        "sub_key": "CodiMD",
         "version_digits_in_key": 1
     },
     "registries": [{
