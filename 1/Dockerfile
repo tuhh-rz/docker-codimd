@@ -107,3 +107,9 @@ COPY ["resources/docker-entrypoint.sh", "/usr/local/bin/docker-entrypoint.sh"]
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 CMD ["node", "app.js"]
+
+LABEL \
+    de.tuhh.ci_repository_url=$CI_REPOSITORY_URL \
+    de.tuhh.ci_commit_short_sha=$CI_COMMIT_SHORT_SHA \
+    de.tuhh.build-date=$BUILD_DATE \
+    de.tuhh.version=$VERSION
